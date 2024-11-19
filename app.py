@@ -92,19 +92,21 @@ def search_web(query, num_results=5):
 @app.route('/')
 def home():
     session['chat_history'] = []
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({"status": "success", "message": "Chat history cleared"})
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_message = request.json['message']
     use_web_search = request.json.get('useWebSearch', False)
+    custom_instructions = request.json.get('customInstructions', '')
     
     chat_history = session.get('chat_history', [])
     chat_history.append({"role": "user", "content": user_message})
     
     context = ""
     if use_web_search:
-        # הכנת שאילתת חיפוש מדויקת יותר
         search_query = f"{user_message} latest information details analysis"
         search_results = search_web(search_query)
         context = "\n".join(search_results)
@@ -119,20 +121,10 @@ def chat():
 4. השתמש ב-> בתחילת שורה לציטוטים
 5. השתמש ב--- ליצירת קו הפרדה
 6. השתמש ב• או ב-1. לרשימות
-
-דוגמה לפורמט:
-### כותרת ראשית
-תוכן הפסקה הראשונה...
-
-### נקודות חשובות:
-• נקודה ראשונה
-• נקודה שנייה
-
-> ציטוט חשוב
-
----
-**מסקנה** או *סיכום*...
 """
+
+    if custom_instructions:
+        system_message += f"\n\nהנחיות אישיות נוספות:\n{custom_instructions}"
 
     if context:
         system_message += f"""
@@ -154,8 +146,8 @@ def chat():
             model="grok-beta",
             messages=messages,
             temperature=0.7,
-            presence_penalty=0.6,  # מעודד גיוון בתשובות
-            frequency_penalty=0.2  # מונע חזרות
+            presence_penalty=0.6,
+            frequency_penalty=0.2
         )
         
         assistant_response = response.choices[0].message.content

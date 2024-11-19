@@ -460,12 +460,136 @@
                 height: 38px;
             }
         }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+        }
+
+        #new-chat-btn {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            font-size: 0.9em;
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #new-chat-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #new-chat-btn i {
+            font-size: 0.9em;
+        }
+
+        @media screen and (max-width: 768px) {
+            #new-chat-btn {
+                padding: 6px 12px;
+                font-size: 0.8em;
+            }
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        #settings-btn {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        #settings-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .modal-footer {
+            text-align: left;
+        }
+
+        .modal-footer button {
+            padding: 8px 20px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="header">
         <h1>Haim's Bot</h1>
+        <div class="header-buttons">
+            <button onclick="openSettings()" id="settings-btn" title="הגדרות">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button onclick="startNewChat()" id="new-chat-btn" title="שיחה חדשה">
+                <i class="fas fa-plus"></i>
+                שיחה חדשה
+            </button>
+        </div>
     </div>
     <div id="chat-container"></div>
     <div id="input-container">
@@ -486,8 +610,25 @@
         <span></span>
     </div>
 
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>הגדרות הבוט</h2>
+                <button class="close-btn" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="custom-instructions">הנחיות אישיות לבוט:</label>
+                <textarea id="custom-instructions" placeholder="הזן כאן הנחיות אישיות להתנהגות הבוט..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button onclick="saveSettings()">שמור הגדרות</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let useWebSearch = false;
+        let customInstructions = localStorage.getItem('customInstructions') || '';
 
         function toggleWebSearch() {
             useWebSearch = !useWebSearch;
@@ -555,15 +696,20 @@
 
         function showTypingIndicator() {
             const indicator = document.getElementById('typing-indicator');
-            indicator.style.display = 'block';
             const chatContainer = document.getElementById('chat-container');
-            chatContainer.appendChild(indicator);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            if (indicator && chatContainer) {
+                indicator.style.display = 'block';
+                chatContainer.appendChild(indicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         }
 
         function hideTypingIndicator() {
             const indicator = document.getElementById('typing-indicator');
-            indicator.style.display = 'none';
+            if (indicator) {
+                indicator.style.display = 'none';
+                document.body.appendChild(indicator);
+            }
         }
 
         function sendMessage() {
@@ -582,7 +728,8 @@
                     },
                     body: JSON.stringify({ 
                         message: message,
-                        useWebSearch: useWebSearch  // שליחת המצב הנוכחי
+                        useWebSearch: useWebSearch,
+                        customInstructions: customInstructions  // הוספת ההנחיות האישיות
                     })
                 })
                 .then(response => response.json())
@@ -616,6 +763,47 @@
                     button.style.background = '';
                 }, 1500);
             });
+        }
+
+        function startNewChat() {
+            const chatContainer = document.getElementById('chat-container');
+            if (chatContainer) {
+                hideTypingIndicator();
+                chatContainer.innerHTML = '';
+                
+                fetch('/', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).then(response => response.json())
+                .catch(error => {
+                    console.error('Error starting new chat:', error);
+                });
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+            document.getElementById('custom-instructions').value = customInstructions;
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            customInstructions = document.getElementById('custom-instructions').value;
+            localStorage.setItem('customInstructions', customInstructions);
+            closeSettings();
+        }
+
+        // סגירת המודאל כשלוחצים מחוץ לתוכן שלו
+        window.onclick = function(event) {
+            const modal = document.getElementById('settings-modal');
+            if (event.target == modal) {
+                closeSettings();
+            }
         }
     </script>
 </body>
