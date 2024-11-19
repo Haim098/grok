@@ -4,6 +4,7 @@
     <title>Grok Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
             margin: 0;
@@ -43,6 +44,8 @@
             display: flex;
             gap: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            bottom: 20px;
         }
 
         #user-input {
@@ -183,13 +186,69 @@
 
         #web-search-btn {
             padding: 12px;
-            margin-left: 5px;
-            background: #7c8fef;
-            transition: all 0.3s ease;
+            margin: 0;
+            border-radius: 10px;
         }
 
-        #web-search-btn:hover {
-            background: #6477d9;
+        .button-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media screen and (max-width: 768px) {
+            #chat-container {
+                width: 95%;
+                height: 80vh;
+                margin: 10px;
+                padding: 10px;
+            }
+
+            #input-container {
+                width: 95%;
+                padding: 10px;
+                flex-wrap: wrap;
+            }
+
+            #user-input {
+                width: 100%;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+
+            button {
+                padding: 10px 15px;
+                font-size: 14px;
+                width: calc(50% - 5px);
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+
+            .bot-message {
+                font-size: 14px;
+            }
+
+            .bot-message h3 {
+                font-size: 1.1em;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            #chat-container {
+                width: 98%;
+                height: 75vh;
+            }
+
+            #input-container {
+                width: 98%;
+            }
+
+            .message {
+                max-width: 95%;
+            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -198,13 +257,15 @@
     <div id="chat-container"></div>
     <div id="input-container">
         <input type="text" id="user-input" placeholder="הקלד הודעה...">
-        <button onclick="toggleWebSearch()" id="web-search-btn" title="חיפוש באינטרנט">
-            <i class="fas fa-globe"></i>
-        </button>
-        <button onclick="sendMessage()">
-            <i class="fas fa-paper-plane"></i>
-            שלח
-        </button>
+        <div class="button-group">
+            <button onclick="toggleWebSearch()" id="web-search-btn" title="חיפוש באינטרנט">
+                <i class="fas fa-globe"></i>
+            </button>
+            <button onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+                שלח
+            </button>
+        </div>
     </div>
     <div class="typing-indicator" id="typing-indicator">
         <span></span>
