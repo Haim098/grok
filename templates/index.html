@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <title>Grok Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Heebo', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #225bb1 0%, #a56326 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 70vh;
+            background: rgba(199, 154, 154, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            margin: 20px;
+            scroll-behavior: smooth;
+        }
+
+        #input-container {
+            width: 90%;
+            max-width: 800px;
+            background: rgba(132, 41, 150, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: #7c8fef;
+            box-shadow: 0 0 0 3px rgba(124, 143, 239, 0.2);
+        }
+
+        button {
+            background: #7c8fef;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #6477d9;
+            transform: translateY(-2px);
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 12px 20px;
+            border-radius: 15px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: #7c8fef;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            background: #f0f2f5;
+            color: #1a1a1a;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+            white-space: pre-line;
+        }
+
+        .bot-message h3 {
+            margin: 15px 0 10px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        .bot-message em {
+            font-style: italic;
+        }
+
+        .bot-message strong {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .bot-message ul, .bot-message ol {
+            margin: 10px 20px;
+        }
+
+        .bot-message li {
+            margin: 5px 0;
+        }
+
+        .bot-message hr {
+            margin: 15px 0;
+            border: none;
+            height: 1px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .bot-message blockquote {
+            border-right: 3px solid #7c8fef;
+            margin: 10px 0;
+            padding: 5px 15px;
+            background: rgba(124, 143, 239, 0.1);
+        }
+
+        .message-time {
+            font-size: 0.7em;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: left;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 20px;
+            background: #f0f2f5;
+            border-radius: 15px;
+            margin: 10px 0;
+            width: fit-content;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #90949c;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: typing 1s infinite;
+        }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        #web-search-btn {
+            padding: 12px;
+            margin-left: 5px;
+            background: #7c8fef;
+            transition: all 0.3s ease;
+        }
+
+        #web-search-btn:hover {
+            background: #6477d9;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="chat-container"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="הקלד הודעה...">
+        <button onclick="toggleWebSearch()" id="web-search-btn" title="חיפוש באינטרנט">
+            <i class="fas fa-globe"></i>
+        </button>
+        <button onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+            שלח
+        </button>
+    </div>
+    <div class="typing-indicator" id="typing-indicator">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <script>
+        let useWebSearch = false;
+
+        function toggleWebSearch() {
+            useWebSearch = !useWebSearch;
+            const btn = document.getElementById('web-search-btn');
+            btn.style.background = useWebSearch ? '#4CAF50' : '#7c8fef';
+            btn.title = useWebSearch ? 'חיפוש באינטרנט מופעל' : 'חיפוש באינטרנט כבוי';
+        }
+
+        function formatTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addMessage(message, isUser) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const messageContent = document.createElement('div');
+            if (isUser) {
+                messageContent.textContent = message;
+            } else {
+                // Convert markdown to HTML
+                messageContent.innerHTML = marked.parse(message);
+            }
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = formatTime();
+            
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(timeDiv);
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = 'block';
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.appendChild(indicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = 'none';
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage(message, true);
+                input.value = '';
+                showTypingIndicator();
+
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        useWebSearch: useWebSearch  // שליחת המצב הנוכחי
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideTypingIndicator();
+                    addMessage(data.response, false);
+                });
+            }
+        }
+
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 
