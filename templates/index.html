@@ -195,29 +195,39 @@
         .typing-indicator {
             display: none;
             padding: 12px 20px;
-            background: #f0f2f5;
+            background: var(--message-bot);
             border-radius: 15px;
             margin: 10px 0;
             width: fit-content;
+            margin-right: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .typing-indicator span {
-            display: inline-block;
+        .dots-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
             width: 8px;
             height: 8px;
             background: #90949c;
             border-radius: 50%;
-            margin-right: 5px;
-            animation: typing 1s infinite;
+            animation: bounce 1.4s infinite ease-in-out;
         }
 
-        @keyframes typing {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
 
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { 
+                transform: translateY(0);
+            }
+            40% { 
+                transform: translateY(-8px);
+            }
+        }
 
         #web-search-btn {
             padding: 12px;
@@ -600,6 +610,59 @@
         .modal-footer button {
             padding: 8px 20px;
         }
+
+        .cancel-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            height: auto;
+        }
+
+        .cancel-btn:hover {
+            background: #c82333;
+        }
+
+        @media screen and (max-width: 768px) {
+            .cancel-btn {
+                padding: 4px 10px;
+                font-size: 0.8em;
+            }
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        #cancel-btn {
+            position: absolute;
+            left: 10px;
+            background: #dc3545;
+            padding: 5px 10px;
+            height: 30px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        #cancel-btn.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        #cancel-btn:hover {
+            background: #c82333;
+        }
+
+        #user-input {
+            padding-left: 45px; /* מרווח בשביל כפתור הביטול */
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -618,7 +681,12 @@
     </div>
     <div id="chat-container"></div>
     <div id="input-container">
-        <input type="text" id="user-input" placeholder="הקלד הודעה...">
+        <div class="input-wrapper">
+            <input type="text" id="user-input" placeholder="הקלד הודעה...">
+            <button onclick="cancelResponse()" id="cancel-btn" class="cancel-btn" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         <div class="button-group">
             <button onclick="toggleWebSearch()" id="web-search-btn" title="חיפוש באינטרנט">
                 <i class="fas fa-globe"></i>
@@ -630,9 +698,11 @@
         </div>
     </div>
     <div class="typing-indicator" id="typing-indicator">
-        <span></span>
-        <span></span>
-        <span></span>
+        <div class="dots-container">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
     </div>
 
     <div id="settings-modal" class="modal">
@@ -654,6 +724,8 @@
     <script>
         let useWebSearch = false;
         let customInstructions = localStorage.getItem('customInstructions') || '';
+        let currentController = null;
+        let chatHistory = [];
 
         function toggleWebSearch() {
             useWebSearch = !useWebSearch;
@@ -721,19 +793,33 @@
 
         function showTypingIndicator() {
             const indicator = document.getElementById('typing-indicator');
+            const cancelBtn = document.getElementById('cancel-btn');
             const chatContainer = document.getElementById('chat-container');
-            if (indicator && chatContainer) {
+            
+            if (indicator) {
                 indicator.style.display = 'block';
                 chatContainer.appendChild(indicator);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.style.display = 'flex';
+                setTimeout(() => cancelBtn.classList.add('visible'), 10);
             }
         }
 
         function hideTypingIndicator() {
             const indicator = document.getElementById('typing-indicator');
+            const cancelBtn = document.getElementById('cancel-btn');
+            
             if (indicator) {
                 indicator.style.display = 'none';
                 document.body.appendChild(indicator);
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.classList.remove('visible');
+                setTimeout(() => cancelBtn.style.display = 'none', 300);
             }
         }
 
@@ -746,6 +832,11 @@
                 input.value = '';
                 showTypingIndicator();
 
+                chatHistory.push({"role": "user", "content": message});
+
+                currentController = new AbortController();
+                const signal = currentController.signal;
+
                 fetch('/chat', {
                     method: 'POST',
                     headers: {
@@ -754,14 +845,35 @@
                     body: JSON.stringify({ 
                         message: message,
                         useWebSearch: useWebSearch,
-                        customInstructions: customInstructions  // הוספת ההנחיות האישיות
-                    })
+                        customInstructions: customInstructions,
+                        chatHistory: chatHistory
+                    }),
+                    signal
                 })
                 .then(response => response.json())
                 .then(data => {
                     hideTypingIndicator();
                     addMessage(data.response, false);
+                    chatHistory.push({"role": "assistant", "content": data.response});
+                })
+                .catch(error => {
+                    if (error.name === 'AbortError') {
+                        console.log('Request cancelled');
+                        addMessage("*הבקשה בוטלה על ידי המשתמש*", false);
+                    } else {
+                        console.error('Error:', error);
+                        addMessage("*אירעה שגיאה בעיבוד הבקשה*", false);
+                    }
+                    hideTypingIndicator();
                 });
+            }
+        }
+
+        function cancelResponse() {
+            if (currentController) {
+                currentController.abort();
+                currentController = null;
+                hideTypingIndicator();
             }
         }
 
@@ -795,6 +907,7 @@
             if (chatContainer) {
                 hideTypingIndicator();
                 chatContainer.innerHTML = '';
+                chatHistory = [];
                 
                 fetch('/', {
                     method: 'GET',

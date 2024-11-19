@@ -98,12 +98,13 @@ def home():
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    if request.headers.get('Connection') == 'close':
+        return jsonify({"response": "Request cancelled"}), 499
+
     user_message = request.json['message']
     use_web_search = request.json.get('useWebSearch', False)
     custom_instructions = request.json.get('customInstructions', '')
-    
-    chat_history = session.get('chat_history', [])
-    chat_history.append({"role": "user", "content": user_message})
+    chat_history = request.json.get('chatHistory', [])
     
     context = ""
     if use_web_search:
@@ -118,10 +119,10 @@ def chat():
 1. השתמש בסימון ### לכותרות משנה
 2. השתמש ב-** ** להדגשת מילים חשובות
 3. השתמש ב-* * לטקסט נטוי
-4. השתמש ב-> בתחילת שורה לציטוטים
-5. השתמש ב--- ליצירת קו הפרדה
-6. השתמש ב• או ב-1. לרשימות
-"""
+4. השתמש ב--- ליצירת קו הפרדה
+5. השתמש ב• או ב-1. לרשימות
+
+הערה חשובה: אל תוסיף ציטוטים או אמרות בתחילת או בסוף התשובות שלך."""
 
     if custom_instructions:
         system_message += f"\n\nהנחיות אישיות נוספות:\n{custom_instructions}"
@@ -151,9 +152,6 @@ def chat():
         )
         
         assistant_response = response.choices[0].message.content
-        chat_history.append({"role": "assistant", "content": assistant_response})
-        session['chat_history'] = chat_history
-        
         return jsonify({"response": assistant_response})
     except Exception as e:
         return jsonify({"response": f"התרחשה שגיאה: {str(e)}"})
